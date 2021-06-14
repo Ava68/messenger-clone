@@ -2,26 +2,42 @@ import "./App.css";
 import { useEffect, useState } from "react";
 import { Button, FormControl, InputLabel, Input } from "@material-ui/core";
 import Message from "./Message";
+import db from "./firebase";
+import firebase from "firebase";
+import Flipmove from "react-flip-move";
 
 function App() {
   const [input, setInput] = useState();
-  const [messages, setMessages] = useState([
-    { username: "Avadhesh", text: "whats up" },
-    { username: "prem", text: "Hi guys" },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    //runs when a app component loads
+    db.collection("messages")
+      .orderBy("timestamp", "desc")
+      .onSnapshot((snapshot) => {
+        setMessages(
+          snapshot.docs.map((doc) => ({ id: doc.id, message: doc.data() }))
+        );
+      });
+  }, []);
 
   //useEffect = run code on a condition
   useEffect(() => {
     //run a code here...
     // if its [] blank then this code runs when the app component loads
-    // if we have a variable like input then this code will run every time as input variable changes
+    // if we have a variable inside [] like input then this code will run every time as input variable changes
     setUsername(prompt("please enter your name"));
   }, []); //condition
 
   const sendMessage = (e) => {
     e.preventDefault();
-    setMessages([...messages, { username: username, text: input }]);
+    db.collection("messages").add({
+      message: input,
+      username: username,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
     setInput("");
   };
 
@@ -46,9 +62,11 @@ function App() {
         </FormControl>
       </form>
 
-      {messages.map((message) => (
-        <Message username={username} message={message} />
-      ))}
+      <Flipmove>
+        {messages.map(({ id, message }) => (
+          <Message key={id} username={username} message={message} />
+        ))}
+      </Flipmove>
     </div>
   );
 }
